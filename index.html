@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title>Control WEBP Playback</title>
+	<meta name="viewport" content="initial-scale=1, minimum-scale=1, maximum-scale=1, width=device-width" />
+	<style>
+
+	</style>
+</head>
+
+<body>
+
+	<canvas width="800" height="800"></canvas>
+
+	<script>
+		addEventListener("DOMContentLoaded", () => {
+
+			let imageDecoder = null;
+			let imageIndex = 0;
+
+			function renderImage(result) {
+				const canvas = document.querySelector("canvas");
+				const canvasContext = canvas.getContext("2d");
+
+				canvasContext.drawImage(result.image, 0, 0);
+
+				const track = imageDecoder.tracks.selectedTrack;
+
+				if (imageDecoder.complete) {
+					if (track.frameCount === 1) return;
+					if (imageIndex + 1 >= track.frameCount) imageIndex = 0;
+				}
+
+				if (imageIndex < track.frameCount - 2) {
+
+					imageDecoder
+					.decode({ frameIndex: ++imageIndex })
+					.then((nextResult) =>
+						setTimeout(() => {
+							renderImage(nextResult);
+						}, result.image.duration / 1000.0),
+					)
+					.catch((e) => {
+						if (e instanceof RangeError) {
+							imageIndex = 0;
+							imageDecoder.decode({ frameIndex: imageIndex }).then(renderImage);
+						} else {
+							throw e;
+						}
+					});
+
+				}
+			}
+
+			function decodeImage(imageByteStream) {
+				imageDecoder = new ImageDecoder({ data: imageByteStream, type: "image/webp" });
+				imageDecoder.decode({ frameIndex: imageIndex }).then(renderImage);
+			}
+
+			fetch("./sharing-insights.webp").then((response) => decodeImage(response.body));
+
+		});
+	</script>
+
+</body>
+
+</html>
